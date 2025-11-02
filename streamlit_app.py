@@ -305,10 +305,6 @@ if not df.empty and {"name","lat","lon"}.issubset(df.columns):
             st.error("❌ CSV 檔案為空或格式錯誤")
         except Exception as e:
             st.error(f"❌ 讀取 CSV 發生錯誤：{e}")
-    D = st.session_state.dist_df
-    st.subheader("📄 距離矩陣預覽：")
-    st.dataframe(D)
-    #D.drop(D.columns.difference(['name']), axis=1, inplace=True, errors='ignore')  # 移除非數值欄位（如有）
 
     uploaded_Time_file = st.file_uploader("請上傳 .csv 時間矩陣檔", type=["csv"])
     if "time_df" not in st.session_state:
@@ -335,9 +331,35 @@ if not df.empty and {"name","lat","lon"}.issubset(df.columns):
         except Exception as e:
             st.error(f"❌ 讀取 CSV 發生錯誤：{e}")
 
-    T = st.session_state.time_df
-    st.subheader("📄 時間矩陣預覽：")
-    st.dataframe(T)
+    # -----------------------------
+    # 🔄 根據當前 middle_points 自動同步 D, T
+    # -----------------------------
+    if not st.session_state.dist_df.empty or not st.session_state.time_df.empty:
+        selected_points = [start_point] + middle_points + [end_point]
+
+        def filter_matrix(df, label):
+            if df.empty:
+                return df
+            # 移除未選擇的點
+            not_included = set(df['name']) - set(selected_points)
+            if not_included:
+                st.warning(f"⚠️ {label} 中包含未選擇的點，將自動移除：{', '.join(not_included)}")
+            df = df[df['name'].isin(selected_points)]
+            columns_to_keep = ['name'] + [p for p in selected_points if p in df.columns]
+            df = df[columns_to_keep]
+            return df
+
+        D = filter_matrix(st.session_state.dist_df.copy(), "距離矩陣")
+        T = filter_matrix(st.session_state.time_df.copy(), "時間矩陣")
+
+        st.session_state.dist_df = D
+        st.session_state.time_df = T
+
+        st.subheader("📄 距離矩陣預覽：")
+        st.dataframe(D)
+
+        st.subheader("📄 時間矩陣預覽：")
+        st.dataframe(T)
 
     run_btn = st.button("執行 NSGA-II 最佳化")
 
