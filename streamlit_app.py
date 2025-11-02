@@ -280,8 +280,32 @@ if not df.empty and {"name","lat","lon"}.issubset(df.columns):
 
     st.markdown("---")
     st.subheader("🚀 使用 NSGA-II 進行路線最佳化（多目標：距離 + 時間）")
+    
+    st.subheader("距離矩陣與時間矩陣範例格式說明")
+    data = {
+    "name": ["高鐵", "左營孔子廟", "大港橋", "公園二路(集合)", "晚餐(鹽埕區夜市)", "鹽埕區鹽埕國民小學(集合)"],
+    "高鐵": [0, 3.5, 9.8, 9.2, 9.7, 9.8],
+    "左營孔子廟": [3.5, 0, 9.8, 9.4, 8.9, 8.9],
+    "大港橋": [9.8, 9.8, 0, 0.45, 1, 0.85],
+    "公園二路(集合)": [9.2, 9.4, 0.45, 0, 0.55, 0.4],
+    "晚餐(鹽埕區夜市)": [9.7, 8.9, 1, 0.55, 0, 0.6],
+    "鹽埕區鹽埕國民小學(集合)": [9.8, 8.9, 0.85, 0.4, 0.6, 0]
+    }
+    example_df = pd.DataFrame(data)
+    
+
+    with st.expander("📄 距離/時間矩陣格式範例（點擊展開/收合）"):
+        st.markdown("距離矩陣與時間矩陣的 CSV 檔案應包含以下格式：")
+        st.dataframe(example_df)
+        st.markdown(f"""
+        其中第一欄為地點名稱，後續欄位為各地點之間的距離或時間（單位可自行定義，如公里或分鐘）。
+        注意：距離矩陣與時間矩陣中的地點名稱必須與您在左側選擇的起點、終點及中途景點一致。
+        任何不在您選擇清單中的地點將自動從矩陣中移除。
+        例如，若您選擇的地點為：{', '.join(example_df['name'].values[random.sample(range(len(example_df)), 4)])}，則矩陣中應僅包含這些地點的資料。
+        """)
 
     uploaded_Dist_file = st.file_uploader("請上傳 .csv 距離矩陣檔", type=["csv"])
+    
     if "dist_df" not in st.session_state:
         st.session_state.dist_df = pd.DataFrame()
 
