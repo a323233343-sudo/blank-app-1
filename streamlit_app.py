@@ -235,8 +235,25 @@ middle_points = st.sidebar.multiselect(
 )
 
 st.sidebar.header("⚙️ NSGA-II 參數")
-pop_size = st.sidebar.number_input("族群大小 (pop_size)", min_value=10, max_value=500, value=80, step=10)
-gens = st.sidebar.number_input("世代數 (gens)", min_value=10, max_value=2000, value=200, step=10)
+st.sidebar.markdown(
+    """
+    <label title="每一代中的個體數量。越大代表探索空間越廣，但運算時間也越長。">
+        🧬 族群大小 (pop_size)
+    </label>
+    """,
+    unsafe_allow_html=True
+)
+
+pop_size = st.sidebar.number_input("", min_value=10, max_value=500, value=80, step=10)
+st.sidebar.markdown(
+    """
+    <label title="演算法進化的迭代次數。越多的迭代可能找到更好的解，但會增加計算時間。">
+        🔁 迭代次數 (iter)
+    </label>
+    """,
+    unsafe_allow_html=True
+)
+gens = st.sidebar.number_input("", min_value=10, max_value=2000, value=200, step=10)
 cx_prob = st.sidebar.slider("交配機率 (cx_prob)", 0.0, 1.0, 0.9)
 mut_prob = st.sidebar.slider("突變機率 (mut_prob)", 0.0, 1.0, 0.2)
 close_loop = st.sidebar.checkbox("封閉回到起點 (close loop)", value=False)
