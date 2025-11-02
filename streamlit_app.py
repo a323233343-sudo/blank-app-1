@@ -360,7 +360,7 @@ if not df.empty and {"name","lat","lon"}.issubset(df.columns):
             )
             elapsed = time.time() - start_time
             # 把 pareto routes 由索引轉回名稱/座標
-            for idx,    ate(pareto):
+            for idx, p in enumerate(pareto):
                 p['route_names'] = [route_df.iloc[i]['name'] for i in p['route']]
                 p['route_coords'] = [coords[i] for i in p['route']]
 
