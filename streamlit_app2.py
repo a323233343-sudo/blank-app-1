@@ -110,7 +110,7 @@ class NSGAII_tsp:
                     route.insert(n - 3, elem)
         return route
 
-    def nsga2_tsp(self, D, T, coords=None, pop_size=80, gens=200, cx_prob=0.9, mut_prob=0.2, close_loop=False, start_idx=0, end_idx=None, seed=None):
+    def nsga2_tsp(self, D, T, coords=None, pop_size=80, gens=200, cx_prob=0.9, mut_prob=0.2, close_loop=False, seed=None):
         if seed is not None:
             random.seed(seed)
             np.random.seed(seed)
@@ -129,17 +129,7 @@ class NSGAII_tsp:
                 total += T[r[-1], r[0]]
             return total
 
-        if end_idx is None:
-            end_idx = n - 1
-
-        # === 初始化族群 ===
-        all_nodes = [i for i in range(n) if i not in [start_idx, end_idx]]
-        population = []
-        for _ in range(pop_size):
-            middle = random.sample(all_nodes, len(all_nodes))
-            route = [start_idx] + middle + [end_idx]
-            route = self.enforce_order(route)
-            population.append({'route': route, 'objs': None})
+        population = [{'route': self.enforce_order(random.sample(range(n), n)), 'objs': None} for _ in range(pop_size)]
 
         def evaluate(pop):
             for ind in pop:
@@ -163,13 +153,15 @@ class NSGAII_tsp:
             while len(offspring) < pop_size:
                 p1 = self.tournament_selection(population)
                 p2 = self.tournament_selection(population)
-                child = self.ordered_crossover_fixed(p1['route'][1:-1], p2['route'][1:-1]) if random.random() < cx_prob else p1['route'][1:-1][:]
+                child = self.ordered_crossover_fixed(p1['route'], p2['route']) if random.random() < cx_prob else p1['route'][:]
                 child = self.swap_mutation_fixed(child, mut_prob)
                 child = self.enforce_order(child)
-                # ✅ 保留起終點
-                child = [start_idx] + child + [end_idx]
+                # ensure start at index 0 (optional) - only if you want first element fixed
+                if child[0] != 0:
+                    if 0 in child:
+                        child.remove(0)
+                    child = [0] + child
                 offspring.append({'route': child, 'objs': None})
-
             evaluate(offspring)
 
             combined = population + offspring
@@ -277,7 +269,7 @@ if not df.empty and {"name","lat","lon"}.issubset(df.columns):
     st.subheader("🌏 現選路線地點（按順序顯示）")
     m = folium.Map(location=[route_df["lat"].mean(), route_df["lon"].mean()], zoom_start=13)
     coords = list(zip(route_df["lat"], route_df["lon"]))
-    folium.PolyLine(coords, color="blue", weight=4, opacity=1).add_to(m)
+    folium.PolyLine(coords, color="blue", weight=4, opacity=0.7).add_to(m)
     for i, row in enumerate(route_df.itertuples()):
         label = f"🏁 起點" if row.name == start_point else f"🎯 終點" if row.name == end_point else f"{i}. {row.name}"
         folium.Marker([row.lat, row.lon], popup=label, tooltip=row.name).add_to(m)
@@ -288,32 +280,8 @@ if not df.empty and {"name","lat","lon"}.issubset(df.columns):
 
     st.markdown("---")
     st.subheader("🚀 使用 NSGA-II 進行路線最佳化（多目標：距離 + 時間）")
-    
-    st.subheader("距離矩陣與時間矩陣範例格式說明")
-    data = {
-    "name": ["高鐵", "左營孔子廟", "大港橋", "公園二路(集合)", "晚餐(鹽埕區夜市)", "鹽埕區鹽埕國民小學(集合)"],
-    "高鐵": [0, 3.5, 9.8, 9.2, 9.7, 9.8],
-    "左營孔子廟": [3.5, 0, 9.8, 9.4, 8.9, 8.9],
-    "大港橋": [9.8, 9.8, 0, 0.45, 1, 0.85],
-    "公園二路(集合)": [9.2, 9.4, 0.45, 0, 0.55, 0.4],
-    "晚餐(鹽埕區夜市)": [9.7, 8.9, 1, 0.55, 0, 0.6],
-    "鹽埕區鹽埕國民小學(集合)": [9.8, 8.9, 0.85, 0.4, 0.6, 0]
-    }
-    example_df = pd.DataFrame(data)
-    
-
-    with st.expander("📄 距離/時間矩陣格式範例（點擊展開/收合）"):
-        st.markdown("距離矩陣與時間矩陣的 CSV 檔案應包含以下格式：")
-        st.dataframe(example_df)
-        st.markdown(f"""
-        其中第一欄為地點名稱，後續欄位為各地點之間的距離或時間（單位可自行定義，如公里或分鐘）。
-        注意：距離矩陣與時間矩陣中的地點名稱必須與您在左側選擇的起點、終點及中途景點一致。
-        任何不在您選擇清單中的地點將自動從矩陣中移除。
-        例如，若您選擇的地點為：{', '.join(example_df['name'].values[random.sample(range(len(example_df)), 4)])}，則矩陣中應僅包含這些地點的資料。
-        """)
 
     uploaded_Dist_file = st.file_uploader("請上傳 .csv 距離矩陣檔", type=["csv"])
-    
     if "dist_df" not in st.session_state:
         st.session_state.dist_df = pd.DataFrame()
 
@@ -363,35 +331,13 @@ if not df.empty and {"name","lat","lon"}.issubset(df.columns):
         except Exception as e:
             st.error(f"❌ 讀取 CSV 發生錯誤：{e}")
 
-    # -----------------------------
-    # 🔄 根據當前 middle_points 自動同步 D, T
-    # -----------------------------
-    if not st.session_state.dist_df.empty or not st.session_state.time_df.empty:
-        selected_points = [start_point] + middle_points + [end_point]
+    D = st.session_state.dist_df
+    st.subheader("📄 距離矩陣預覽：")
+    st.dataframe(D)
 
-        def filter_matrix(df, label):
-            if df.empty:
-                return df
-            # 移除未選擇的點
-            not_included = set(df['name']) - set(selected_points)
-            if not_included:
-                st.warning(f"⚠️ {label} 中包含未選擇的點，將自動移除：{', '.join(not_included)}")
-            df = df[df['name'].isin(selected_points)]
-            columns_to_keep = ['name'] + [p for p in selected_points if p in df.columns]
-            df = df[columns_to_keep]
-            return df
-
-        D = filter_matrix(st.session_state.dist_df.copy(), "距離矩陣")
-        T = filter_matrix(st.session_state.time_df.copy(), "時間矩陣")
-
-        st.session_state.dist_df = D
-        st.session_state.time_df = T
-
-        st.subheader("📄 距離矩陣預覽：")
-        st.dataframe(D)
-
-        st.subheader("📄 時間矩陣預覽：")
-        st.dataframe(T)
+    T = st.session_state.time_df
+    st.subheader("📄 時間矩陣預覽：")
+    st.dataframe(T)
 
     run_btn = st.button("執行 NSGA-II 最佳化")
 
@@ -421,22 +367,14 @@ if not df.empty and {"name","lat","lon"}.issubset(df.columns):
             # 執行 NSGA-II
             nsga = NSGAII_tsp()
             st.info("開始執行 NSGA-II，請稍候... 可能需要一些時間（依 gens 與 pop_size 而定）")
-            
             start_time = time.time()
-            
-            idx_map = {name: i for i, name in enumerate(selected_points)}
-            start_idx = idx_map[start_point]
-            end_idx = idx_map[end_point]
-
-            nsga = NSGAII_tsp()
             pareto = nsga.nsga2_tsp(
-                D_mat, T_mat, coords=coords, pop_size=pop_size, gens=gens,
-                cx_prob=cx_prob, mut_prob=mut_prob,
-                close_loop=close_loop,
-                start_idx=start_idx, end_idx=end_idx,
-                seed=seed_val if seed_val != 0 else None
+                D_mat, T_mat, coords=coords,
+                pop_size=int(pop_size), gens=int(gens),
+                cx_prob=float(cx_prob), mut_prob=float(mut_prob),
+                close_loop=bool(close_loop),
+                seed=(None if seed_val == 0 else int(seed_val))
             )
-
             elapsed = time.time() - start_time
             # 把 pareto routes 由索引轉回名稱/座標
             for idx, p in enumerate(pareto):
