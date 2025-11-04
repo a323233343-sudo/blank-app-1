@@ -5,6 +5,19 @@ import numpy as np
 # NSGA-II class (your version, integrated)
 # ----------------------------
 class NSGAII_tsp:
+    def __init__(self, start_idx, end_idx):
+        self.start_idx = start_idx
+        self.end_idx = end_idx
+        
+    def generate_initial_route(self, n):
+        nodes = list(range(n))
+        # 移除固定起點和終點
+        nodes.remove(self.start_idx)
+        nodes.remove(self.end_idx)
+        random.shuffle(nodes)
+        route = [self.start_idx] + nodes + [self.end_idx]
+        return self.enforce_order(route)
+
     def ordered_crossover_fixed(self, p1, p2):
         n = len(p1)
         a, b = sorted(random.sample(range(n), 2))
@@ -151,11 +164,13 @@ class NSGAII_tsp:
                 child = self.ordered_crossover_fixed(p1['route'], p2['route']) if random.random() < cx_prob else p1['route'][:]
                 child = self.swap_mutation_fixed(child, mut_prob)
                 child = self.enforce_order(child)
-                # ensure start at index 0 (optional) - only if you want first element fixed
-                if child[0] != 0:
-                    if 0 in child:
-                        child.remove(0)
-                    child = [0] + child
+                # enforce start & end
+                if child[0] != self.start_idx:
+                    child.remove(self.start_idx)
+                    child = [self.start_idx] + child
+                if child[-1] != self.end_idx:
+                    child.remove(self.end_idx)
+                    child = child + [self.end_idx]
                 offspring.append({'route': child, 'objs': None})
             evaluate(offspring)
 
