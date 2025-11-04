@@ -158,6 +158,8 @@ if not df.empty and {"name","lat","lon"}.issubset(df.columns):
     run_btn = st.button("執行 NSGA-II 最佳化")
     start_idx = D.index[D['name'] == start_point][0]  # 取第一個符合的索引
     end_idx = D.index[D['name'] == end_point][0]  # 取第一個符合的索引
+    bridge_idx = D.index[D['name'] == '大港橋'][0]
+    park_idx = D.index[D['name'] == '公園二路(集合)'][0]
 
     if run_btn:
         # 初始化 session state 變數
@@ -184,7 +186,7 @@ if not df.empty and {"name","lat","lon"}.issubset(df.columns):
             # 對應：route_df 的第 k 個點 對應 nsga2 使用的索引 k (0..n-1)
             # 執行 NSGA-II
             
-            nsga = NSGAII_tsp(start_idx=start_idx, end_idx=end_idx)
+            nsga = NSGAII_tsp(start_idx=start_idx, end_idx=end_idx, bridge_idx=bridge_idx, park_idx=park_idx)
             st.info("開始執行 NSGA-II，請稍候... 可能需要一些時間（依 gens 與 pop_size 而定）")
             start_time = time.time()
             pareto = nsga.nsga2_tsp(

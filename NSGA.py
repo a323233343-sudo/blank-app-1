@@ -5,9 +5,11 @@ import numpy as np
 # NSGA-II class (your version, integrated)
 # ----------------------------
 class NSGAII_tsp:
-    def __init__(self, start_idx, end_idx):
+    def __init__(self, start_idx, end_idx, bridge_idx, park_idx):
         self.start_idx = start_idx
         self.end_idx = end_idx
+        self.bridge_idx = bridge_idx
+        self.park_idx = park_idx
         
     def generate_initial_route(self, n):
         nodes = list(range(n))
@@ -100,7 +102,9 @@ class NSGAII_tsp:
 
     def enforce_order(self, route):
         # 順序約束：第13點(12) 要在第14點(13)之前
-        precedence_rules = [(12, 13)]
+        #bridge_idx = self.D.index[self.D['name'] == '大港橋'][0]
+        #park_idx = self.D.index[self.D['name'] == '公園二路(集合)'][0]
+        precedence_rules = [(self.bridge_idx, self.park_idx)]
         for a, b in precedence_rules:
             if a >= len(route) or b >= len(route):
                 continue
@@ -119,6 +123,8 @@ class NSGAII_tsp:
         return route
 
     def nsga2_tsp(self, D, T, coords=None, pop_size=80, gens=200, cx_prob=0.9, mut_prob=0.2, close_loop=False, seed=None):
+        self.D = D
+        self.T = T
         if seed is not None:
             random.seed(seed)
             np.random.seed(seed)
