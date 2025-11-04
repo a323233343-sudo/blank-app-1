@@ -430,7 +430,7 @@ if not df.empty and {"name","lat","lon"}.issubset(df.columns):
 
             nsga = NSGAII_tsp()
             pareto = nsga.nsga2_tsp(
-                D_mat, T_mat, coords=coords, pop_size=pop_size, gens=gens,
+                D, T, coords=coords, pop_size=pop_size, gens=gens,
                 cx_prob=cx_prob, mut_prob=mut_prob,
                 close_loop=close_loop,
                 start_idx=start_idx, end_idx=end_idx,
