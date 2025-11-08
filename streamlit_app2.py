@@ -239,10 +239,12 @@ if not df.empty and {"name","lat","lon"}.issubset(df.columns):
             "lat": [c[0] for c in best['route_coords']],
             "lon": [c[1] for c in best['route_coords']]
         })
-        st.download_button("💾 下載最佳路線 (CSV)", 
-                         best_df.to_csv(index=False).encode("utf-8"),
-                         file_name="best_route.csv", 
-                         mime="text/csv")
+        st.download_button(
+            "💾 下載最佳路線 (CSV)",
+            best_df.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig"),
+            file_name="best_route.csv",
+            mime="text/csv"
+        )
         
         # Pareto 解顯示
         st.subheader("🧭 所有 Pareto 最佳解")
@@ -285,7 +287,8 @@ if not df.empty and {"name","lat","lon"}.issubset(df.columns):
                 "Route_ID": idx + 1,
                 "Distance": p['objs'][0],
                 "Time": p['objs'][1],
-                "Route": " → ".join(p['route_names'])
+                "Route": " → ".join(p['route_names']),
+                "Coordinates": " | ".join([f"({lat}, {lon})" for lat, lon in p['route_coords']])
             }
             for idx, p in enumerate(sorted(results['pareto'], key=lambda x: x['objs'][0]))
         ]).drop_duplicates(subset=['Route'], keep='first')  # 只保留不重複的路線
@@ -295,7 +298,7 @@ if not df.empty and {"name","lat","lon"}.issubset(df.columns):
         st.dataframe(pareto_summary)
 
         # 提供下載
-        csv_bytes = pareto_summary.to_csv(index=False).encode("utf-8")
+        csv_bytes = pareto_summary.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
         st.download_button(
             "💾 下載所有 Pareto 路線 (CSV)",
             csv_bytes,
