@@ -204,7 +204,7 @@ class NSGAII_tsp:
 # Streamlit UI
 # ----------------------------
 st.set_page_config(page_title="TSP 旅遊路線規劃", layout="wide")
-st.title("🗺️ 智慧旅遊路線系統（RouteXL + Google Map 整合版）")
+st.title("🗺️ 智慧旅遊路線系統")
 
 # -----------------------------
 # CSV 上傳
@@ -420,7 +420,7 @@ if not df.empty and {"name","lat","lon"}.issubset(df.columns):
             # 對應：route_df 的第 k 個點 對應 nsga2 使用的索引 k (0..n-1)
             # 執行 NSGA-II
             nsga = NSGAII_tsp()
-            st.info("開始執行 NSGA-II，請稍候... 可能需要一些時間（依 gens 與 pop_size 而定）")
+            st.info("開始執行 NSGA-II，請稍候... 可能需要一些時間（依 iter 與 pop_size 而定）")
             
             start_time = time.time()
             
@@ -526,7 +526,7 @@ if not df.empty and {"name","lat","lon"}.issubset(df.columns):
                 "Route_ID": idx + 1,
                 "Distance": p['objs'][0],
                 "Time": p['objs'][1],
-                "Route": " → ".join(p['route_names'])
+                #"Route": " → ".join(p['route_names'])
             }
             for idx, p in enumerate(sorted(results['pareto'], key=lambda x: x['objs'][0]))
         ]).drop_duplicates(subset=['Route'], keep='first')  # 只保留不重複的路線

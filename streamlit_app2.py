@@ -156,11 +156,13 @@ if not df.empty and {"name","lat","lon"}.issubset(df.columns):
     st.markdown("---")
 
     run_btn = st.button("執行 NSGA-II 最佳化")
-    start_idx = D.index[D['name'] == start_point][0]  # 取第一個符合的索引
-    end_idx = D.index[D['name'] == end_point][0]  # 取第一個符合的索引
-    bridge_idx = D.index[D['name'] == '大港橋'][0]
-    park_idx = D.index[D['name'] == '公園二路(集合)'][0]
-
+    if D.empty or T.empty:
+        st.warning("請先上傳距離矩陣和時間矩陣的 CSV 檔案。")
+    else:
+        start_idx = D.index[D['name'] == start_point][0]  # 取第一個符合的索引
+        end_idx = D.index[D['name'] == end_point][0]  # 取第一個符合的索引
+        bridge_idx = D.index[D['name'] == '大港橋'][0]
+        park_idx = D.index[D['name'] == '公園二路(集合)'][0]
     if run_btn:
         # 初始化 session state 變數
         if 'optimization_results' not in st.session_state:
