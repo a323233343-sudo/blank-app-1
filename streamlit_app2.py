@@ -290,7 +290,6 @@ if not df.empty and {"name","lat","lon"}.issubset(df.columns):
                 "Distance": p['objs'][0],
                 "Time": p['objs'][1],
                 "Route": " → ".join(p['route_names']),
-                "Coordinates": " | ".join([f"({lat}, {lon})" for lat, lon in p['route_coords']])
             }
             for idx, p in enumerate(sorted(results['pareto'], key=lambda x: x['objs'][0]))
         ]).drop_duplicates(subset=['Route'], keep='first')  # 只保留不重複的路線
