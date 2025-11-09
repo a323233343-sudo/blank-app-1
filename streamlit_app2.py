@@ -11,7 +11,7 @@ from NSGA import NSGAII_tsp
 # Streamlit UI
 # ----------------------------
 st.set_page_config(page_title="TSP 旅遊路線規劃", layout="wide")
-st.title("🗺️ 智慧旅遊路線系統（RouteXL + Google Map 整合版）")
+st.title("🗺️ 智慧旅遊路線系統")
 
 # -----------------------------
 # CSV 上傳
