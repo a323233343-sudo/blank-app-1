@@ -3,4 +3,3 @@ folium
 pandas
 numpy
 streamlit_folium
-googlemaps

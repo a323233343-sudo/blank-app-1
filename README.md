@@ -6,7 +6,7 @@ A simple Streamlit app template for you to modify!
 
 ### How to run it on your own machine
 
-1. # Install the python version don't newer then v3.13
+1. # Install the python version don't newer then v3.12
 
     https://www.python.org/downloads/
 
