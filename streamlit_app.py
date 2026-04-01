@@ -9,7 +9,7 @@ import time
 # ----------------------------
 # NSGA-II class (your version, integrated)
 # ----------------------------
-class NSGAII_tsp:
+class NSGAII_tsp_2opt:
     def ordered_crossover_fixed(self, p1, p2):
         n = len(p1)
         a, b = sorted(random.sample(range(n), 2))
@@ -109,7 +109,45 @@ class NSGAII_tsp:
                     elem = route.pop(ia)
                     route.insert(n - 3, elem)
         return route
+    
+    def route_distance(self, r, D):
+        return sum(D[r[i], r[i + 1]] for i in range(len(r) - 1))
+    
+    def route_time(self, r, T):
+        return sum(T[r[i], r[i + 1]] for i in range(len(r) - 1))
+    
+    def two_opt(self, route, D, T, max_iter=50):
+        best = route[:]
+        best_d = self.route_distance(best, D)
+        best_t = self.route_time(best, T)
 
+        improved = True
+        iter_count = 0
+        window = 8
+
+        while improved and iter_count < max_iter:
+            improved = False
+            iter_count += 1
+
+            for i in range(1, len(route) - window):
+                for j in range(i + 2, min(i + window, len(route) - 1)):
+
+                    new_route = best[:]
+                    new_route[i:j] = reversed(best[i:j])
+
+                    new_d = self.route_distance(new_route, D)
+                    new_t = self.route_time(new_route, T)
+
+                    # Pareto improvement
+                    if (new_d <= best_d and new_t <= best_t) and (new_d < best_d or new_t < best_t):
+                        best = new_route
+                        best_d = new_d
+                        best_t = new_t
+                        improved = True
+
+            route = best
+
+        return best
     def nsga2_tsp(self, D, T, coords=None, pop_size=80, gens=200, cx_prob=0.9, mut_prob=0.2, close_loop=False, start_idx=0, end_idx=None, seed=None):
         if seed is not None:
             random.seed(seed)
@@ -166,8 +204,13 @@ class NSGAII_tsp:
                 child = self.ordered_crossover_fixed(p1['route'][1:-1], p2['route'][1:-1]) if random.random() < cx_prob else p1['route'][1:-1][:]
                 child = self.swap_mutation_fixed(child, mut_prob)
                 child = self.enforce_order(child)
-                # ✅ 保留起終點
+
+                # 加回起終點
                 child = [start_idx] + child + [end_idx]
+
+                # 🔥 2-opt local search（只優化距離）
+                if (p1['rank'] == 0) or (random.random() < 0.2):
+                    child = self.two_opt(child, D, T)
                 offspring.append({'route': child, 'objs': None})
 
             evaluate(offspring)
@@ -419,7 +462,7 @@ if not df.empty and {"name","lat","lon"}.issubset(df.columns):
 
             # 對應：route_df 的第 k 個點 對應 nsga2 使用的索引 k (0..n-1)
             # 執行 NSGA-II
-            nsga = NSGAII_tsp()
+            nsga = NSGAII_tsp_2opt()
             st.info("開始執行 NSGA-II，請稍候... 可能需要一些時間（依 gens 與 pop_size 而定）")
             
             start_time = time.time()
@@ -428,7 +471,6 @@ if not df.empty and {"name","lat","lon"}.issubset(df.columns):
             start_idx = idx_map[start_point]
             end_idx = idx_map[end_point]
 
-            nsga = NSGAII_tsp()
             pareto = nsga.nsga2_tsp(
                 D, T, coords=coords, pop_size=pop_size, gens=gens,
                 cx_prob=cx_prob, mut_prob=mut_prob,
