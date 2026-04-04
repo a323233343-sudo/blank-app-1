@@ -112,7 +112,7 @@ class NSGAII_tsp_2opt:
     
     def route_distance(self, r, D):
         return sum(D[r[i], r[i + 1]] for i in range(len(r) - 1))
-    
+
     def route_time(self, r, T):
         return sum(T[r[i], r[i + 1]] for i in range(len(r) - 1))
     
@@ -324,7 +324,7 @@ if not df.empty and {"name","lat","lon"}.issubset(df.columns):
     for i, row in enumerate(route_df.itertuples()):
         label = f"🏁 起點" if row.name == start_point else f"🎯 終點" if row.name == end_point else f"{i}. {row.name}"
         folium.Marker([row.lat, row.lon], popup=label, tooltip=row.name).add_to(m)
-    st_folium(m, width=900, height=700)
+    st_folium(m, width=900, height=1000)
 
     st.subheader("📋 現選路線順序（使用者選擇順序）")
     st.write(" → ".join(selected_points))
@@ -472,7 +472,7 @@ if not df.empty and {"name","lat","lon"}.issubset(df.columns):
             end_idx = idx_map[end_point]
 
             pareto = nsga.nsga2_tsp(
-                D, T, coords=coords, pop_size=pop_size, gens=gens,
+                D_mat, T_mat, coords=coords, pop_size=pop_size, gens=gens,
                 cx_prob=cx_prob, mut_prob=mut_prob,
                 close_loop=close_loop,
                 start_idx=start_idx, end_idx=end_idx,
@@ -513,7 +513,7 @@ if not df.empty and {"name","lat","lon"}.issubset(df.columns):
         for i, (name, (lat, lon)) in enumerate(zip(best['route_names'], best['route_coords'])):
             label = "🏁 起點" if i == 0 else ("🎯 終點" if i == len(best['route_names'])-1 else f"{i}. {name}")
             folium.Marker([lat, lon], popup=label, tooltip=name).add_to(m2)
-        st_folium(m2, width=900, height=700)
+        st_folium(m2, width=900, height=1000)
 
         # 下載按鈕
         best_df = pd.DataFrame({
@@ -535,7 +535,7 @@ if not df.empty and {"name","lat","lon"}.issubset(df.columns):
                                     np.mean([c[1] for c in results['coords']])], zoom_start=13)
         
         colors = [
-            "#FF0000", "#FF7F00", "#FFFF00", "#00FF00", "#00FFFF",
+            "#FF0000", "#FF8000", "#FFFF00", "#00FF00", "#00FFFF",
             "#0000FF", "#8B00FF", "#FF1493", "#20B2AA", "#808000"
         ]
         for idx, p in enumerate(results['pareto']):
@@ -559,7 +559,7 @@ if not df.empty and {"name","lat","lon"}.issubset(df.columns):
             popup="終點"
         ).add_to(m3)
         
-        st_folium(m3, width=900, height=700)
+        st_folium(m3, width=900, height=1000)
         
         # 顯示 Pareto front table
         st.write("📊 Pareto 路線摘要（依距離排序）")
