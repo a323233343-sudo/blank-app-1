@@ -35,5 +35,5 @@ A simple Streamlit app template for you to modify!
 4. # Run the app
 
    ```
-   $ streamlit run streamlit_app2.py
+   $ streamlit run streamlit_app.py
    ```

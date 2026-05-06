@@ -243,11 +243,126 @@ class NSGAII_tsp_2opt:
         pareto = [population[i] for i in fronts[0]]
         return pareto
 
+
+class GA_TSP:
+    def __init__(self, alpha=0.5, beta=0.5):
+        self.alpha = alpha
+        self.beta = beta
+
+    # ----------------------------
+    # SAFE Order Crossover (OX)
+    # ----------------------------
+    def crossover(self, p1, p2):
+        n = len(p1)
+        a, b = sorted(random.sample(range(n), 2))
+        child = [-1] * n
+
+        # 保留區段
+        child[a:b] = p1[a:b]
+
+        # 補齊
+        fill = [x for x in p2 if x not in child]
+        j = 0
+        for i in range(n):
+            if child[i] == -1:
+                child[i] = fill[j]
+                j += 1
+
+        return child
+
+    # ----------------------------
+    # Mutation (swap)
+    # ----------------------------
+    def mutate(self, route, prob):
+        r = route[:]
+        if random.random() < prob:
+            i, j = random.sample(range(1, len(r)-1), 2)  # 不動起終點
+            r[i], r[j] = r[j], r[i]
+        return r
+
+    # ----------------------------
+    # Fitness
+    # ----------------------------
+    def fitness(self, route, D, T):
+        dist = sum(D[route[i], route[i+1]] for i in range(len(route)-1))
+        time = sum(T[route[i], route[i+1]] for i in range(len(route)-1))
+        return self.alpha * dist + self.beta * time
+
+    # ----------------------------
+    # 初始化族群
+    # ----------------------------
+    def init_population(self, n, pop_size, start_idx, end_idx):
+        nodes = [i for i in range(n) if i not in [start_idx, end_idx]]
+        pop = []
+        for _ in range(pop_size):
+            middle = random.sample(nodes, len(nodes))
+            route = [start_idx] + middle + [end_idx]
+            pop.append(route)
+        return pop
+
+    # ----------------------------
+    # Tournament Selection
+    # ----------------------------
+    def select(self, pop, fitnesses, k=3):
+        selected = random.sample(list(zip(pop, fitnesses)), k)
+        selected.sort(key=lambda x: x[1])
+        return selected[0][0]
+
+    # ----------------------------
+    # GA 主流程
+    # ----------------------------
+    def evolve(self, D, T, pop_size=80, gens=200,
+               cx_prob=0.9, mut_prob=0.2,
+               start_idx=0, end_idx=None):
+
+        n = D.shape[0]
+        if end_idx is None:
+            end_idx = n - 1
+
+        pop = self.init_population(n, pop_size, start_idx, end_idx)
+
+        best = None
+        best_fit = float('inf')
+
+        for g in range(gens):
+
+            fitnesses = [self.fitness(r, D, T) for r in pop]
+
+            new_pop = []
+
+            for _ in range(pop_size):
+                # selection（關鍵）
+                p1 = self.select(pop, fitnesses)
+                p2 = self.select(pop, fitnesses)
+
+                # crossover
+                if random.random() < cx_prob:
+                    child_mid = self.crossover(p1[1:-1], p2[1:-1])
+                    child = [start_idx] + child_mid + [end_idx]
+                else:
+                    child = p1[:]
+
+                # mutation
+                child = self.mutate(child, mut_prob)
+
+                new_pop.append(child)
+
+            pop = new_pop
+
+            # 更新 best
+            for r in pop:
+                fit = self.fitness(r, D, T)
+                if fit < best_fit:
+                    best_fit = fit
+                    best = r
+
+        return best, best_fit
+     
 # ----------------------------
 # Streamlit UI
 # ----------------------------
 st.set_page_config(page_title="TSP 旅遊路線規劃", layout="wide")
-st.title("🗺️ 智慧旅遊路線系統（ 整合Google Map ）")
+st.title("🗺️ 智慧旅遊路線系統")
 
 # -----------------------------
 # CSV 上傳
@@ -435,6 +550,94 @@ if not df.empty and {"name","lat","lon"}.issubset(df.columns):
 
         st.subheader("📄 時間矩陣預覽：")
         st.dataframe(T)
+
+    run_ga_btn = st.button("執行 GA（單目標）")
+    if run_ga_btn:
+        ga = GA_TSP(alpha=0.5, beta=0.5)
+
+        coords = list(zip(route_df["lat"].astype(float), route_df["lon"].astype(float)))
+        n = len(coords)
+
+        if D.empty or 'name' not in D.columns:
+            st.warning("⚠️ 未上傳距離矩陣，將自動以歐氏距離計算")
+            D_mat = np.zeros((n, n))
+            for i in range(n):
+                for j in range(n):
+                    D_mat[i, j] = np.linalg.norm(np.array(coords[i]) - np.array(coords[j]))
+            T_mat = D_mat.copy()
+        else:
+            D_mat = D.drop(columns=['name'], errors='ignore').to_numpy(dtype=float)
+            T_mat = T.drop(columns=['name'], errors='ignore').to_numpy(dtype=float)
+
+        idx_map = {name: i for i, name in enumerate(selected_points)}
+        start_idx = idx_map[start_point]
+        end_idx = idx_map[end_point]
+
+        best_route, best_fit = ga.evolve(
+            D_mat, T_mat,
+            pop_size=pop_size,
+            gens=gens,
+            cx_prob=cx_prob,
+            mut_prob=mut_prob,
+            start_idx=start_idx,
+            end_idx=end_idx
+        )
+
+        route_names = [route_df.iloc[i]['name'] for i in best_route]
+        route_coords = [coords[i] for i in best_route]
+
+        # ✅ 存起來（關鍵）
+        st.session_state.ga_result = {
+            "route": best_route,
+            "fitness": best_fit,
+            "names": route_names,
+            "coords": route_coords
+        }
+
+    if "ga_result" in st.session_state:
+        res = st.session_state.ga_result
+
+        st.subheader("🧬 GA 最佳解（加權）")
+        st.write("Fitness:", res["fitness"])
+        st.write("路線：", " → ".join(res["names"]))
+
+        # =========================
+        # 📍 GA 地圖（不會消失）
+        # =========================
+        m_ga = folium.Map(
+            location=[
+                np.mean([c[0] for c in res["coords"]]),
+                np.mean([c[1] for c in res["coords"]])
+            ],
+            zoom_start=13
+        )
+
+        folium.PolyLine(
+            res["coords"],
+            color="orange",
+            weight=5,
+            opacity=0.9
+        ).add_to(m_ga)
+
+        for i, (name, (lat, lon)) in enumerate(zip(res["names"], res["coords"])):
+            if i == 0:
+                label = "🏁 起點"
+                icon_color = "green"
+            elif i == len(res["names"]) - 1:
+                label = "🎯 終點"
+                icon_color = "red"
+            else:
+                label = f"{i}. {name}"
+                icon_color = "blue"
+
+            folium.Marker(
+                [lat, lon],
+                popup=label,
+                tooltip=name,
+                icon=folium.Icon(color=icon_color)
+            ).add_to(m_ga)
+
+        st_folium(m_ga, width=700, height=1000)
 
     run_btn = st.button("執行 NSGA-II 最佳化")
 
